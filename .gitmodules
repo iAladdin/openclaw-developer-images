@@ -1,0 +1,3 @@
+[submodule "openclaw"]
+	path = deps/openclaw
+	url = git@github.com:iAladdin/openclaw.git
