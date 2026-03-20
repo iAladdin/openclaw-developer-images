@@ -38,6 +38,7 @@ env:
   # Docker Hub can be added later as a separate workflow or extra login/push step.
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 jobs:
   prepare:
@@ -112,9 +113,10 @@ jobs:
         env:
           IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
         run: |
-          tags=("${IMAGE}:${{ matrix.profile.baseTag }}-${{ matrix.profile.slug }}")
+          image="$(printf '%s' "$IMAGE" | tr '[:upper:]' '[:lower:]')"
+          tags=("${image}:${{ matrix.profile.baseTag }}-${{ matrix.profile.slug }}")
           if [[ "${{ matrix.profile.stableRelease }}" == "true" ]]; then
-            tags+=("${IMAGE}:latest-${{ matrix.profile.slug }}")
+            tags+=("${image}:latest-${{ matrix.profile.slug }}")
           fi
 
           {
