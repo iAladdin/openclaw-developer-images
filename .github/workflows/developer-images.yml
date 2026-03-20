@@ -1,0 +1,192 @@
+name: Developer Images (GHCR)
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+    paths:
+      - ".github/workflows/developer-images.yml"
+      - "catalog/**"
+      - "scripts/**"
+      - "Dockerfile.developer"
+      - "package.json"
+      - "test/**"
+      - ".gitmodules"
+      - "deps"
+      - "deps/**"
+  pull_request:
+    paths:
+      - ".github/workflows/developer-images.yml"
+      - "catalog/**"
+      - "scripts/**"
+      - "Dockerfile.developer"
+      - "package.json"
+      - "test/**"
+      - ".gitmodules"
+      - "deps"
+      - "deps/**"
+  workflow_dispatch:
+
+concurrency:
+  group: developer-images-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  # Current publishing target is GHCR only.
+  # Docker Hub can be added later as a separate workflow or extra login/push step.
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    outputs:
+      matrix: ${{ steps.matrix.outputs.value }}
+      openclaw_version: ${{ steps.meta.outputs.openclaw_version }}
+      base_tag: ${{ steps.meta.outputs.base_tag }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Check out official OpenClaw source
+        run: bash scripts/checkout-openclaw-source.sh
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Run repository tests
+        run: npm test
+
+      - name: Read OpenClaw metadata
+        id: meta
+        run: |
+          node --input-type=module <<'EOF' >> "$GITHUB_OUTPUT"
+          import { readOpenClawMetadata, resolveOfficialBaseTag } from "./scripts/lib/openclaw-source.mjs";
+          const metadata = await readOpenClawMetadata();
+          const baseTag = await resolveOfficialBaseTag();
+          console.log(`openclaw_version=${metadata.version}`);
+          console.log(`base_tag=${baseTag}`);
+          EOF
+
+      - name: Generate build matrix
+        id: matrix
+        run: echo "value=$(node scripts/print-build-matrix.mjs)" >> "$GITHUB_OUTPUT"
+
+  build-and-publish:
+    if: github.event_name != 'pull_request'
+    needs: prepare
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        profile: ${{ fromJSON(needs.prepare.outputs.matrix) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Check out official OpenClaw source
+        run: bash scripts/checkout-openclaw-source.sh
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Login to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Resolve image tags
+        id: tags
+        env:
+          IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        run: |
+          tags=("${IMAGE}:${{ matrix.profile.baseTag }}-${{ matrix.profile.slug }}")
+          if [[ "${{ matrix.profile.stableRelease }}" == "true" ]]; then
+            tags+=("${IMAGE}:latest-${{ matrix.profile.slug }}")
+          fi
+
+          {
+            echo "value<<EOF"
+            printf "%s\n" "${tags[@]}"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Resolve OCI labels
+        id: labels
+        run: |
+          created="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          {
+            echo "value<<EOF"
+            echo "org.opencontainers.image.source=https://github.com/${{ github.repository }}"
+            echo "org.opencontainers.image.revision=${{ github.sha }}"
+            echo "org.opencontainers.image.version=${{ needs.prepare.outputs.openclaw_version }}"
+            echo "org.opencontainers.image.created=${created}"
+            echo "io.openclaw.developer.profile=${{ matrix.profile.id }}"
+            echo "io.openclaw.developer.base-tag=${{ matrix.profile.baseTag }}"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Build and push profile image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile.developer
+          platforms: linux/amd64,linux/arm64
+          push: true
+          provenance: false
+          tags: ${{ steps.tags.outputs.value }}
+          labels: ${{ steps.labels.outputs.value }}
+          cache-from: type=gha,scope=${{ matrix.profile.id }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.profile.id }}
+          build-args: |
+            OPENCLAW_BASE_TAG=${{ matrix.profile.baseTag }}
+            OPENCLAW_BASE_VARIANT_SUFFIX=${{ matrix.profile.baseVariantSuffix }}
+            DEV_PROFILE=${{ matrix.profile.id }}
+            DEV_FEATURES=${{ matrix.profile.features }}
+
+  validate-builds:
+    if: github.event_name == 'pull_request'
+    needs: prepare
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        profile: ${{ fromJSON(needs.prepare.outputs.matrix) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Check out official OpenClaw source
+        run: bash scripts/checkout-openclaw-source.sh
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Build validation image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile.developer
+          platforms: linux/amd64
+          push: false
+          provenance: false
+          tags: openclaw-developer:validate-${{ matrix.profile.slug }}
+          cache-from: type=gha,scope=validate-${{ matrix.profile.id }}
+          cache-to: type=gha,mode=max,scope=validate-${{ matrix.profile.id }}
+          build-args: |
+            OPENCLAW_BASE_TAG=${{ matrix.profile.baseTag }}
+            OPENCLAW_BASE_VARIANT_SUFFIX=${{ matrix.profile.baseVariantSuffix }}
+            DEV_PROFILE=${{ matrix.profile.id }}
+            DEV_FEATURES=${{ matrix.profile.features }}

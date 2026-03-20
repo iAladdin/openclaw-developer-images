@@ -1,0 +1,118 @@
+{
+  "features": {
+    "node": {
+      "name": "Node.js",
+      "includedByDefault": true,
+      "description": "Official OpenClaw runtime already bundles Node.js 24 and Corepack-managed pnpm."
+    },
+    "python": {
+      "name": "Python",
+      "description": "Adds Python 3, pip, venv, and pipx for automation, scraping, and data processing."
+    },
+    "go": {
+      "name": "Go",
+      "description": "Adds a pinned Go toolchain for backend, agent tools, and high-performance services."
+    },
+    "rust": {
+      "name": "Rust",
+      "description": "Adds a minimal Rust toolchain through rustup."
+    },
+    "cxx": {
+      "name": "C++ Toolchain",
+      "description": "Adds build-essential, clang, cmake, ninja, gdb, and pkg-config."
+    }
+  },
+  "profiles": [
+    {
+      "id": "node",
+      "name": "Node.js Developer",
+      "slug": "node",
+      "summary": "Fastest path for JavaScript and TypeScript skills, bots, and integrations.",
+      "baseVariant": "default",
+      "features": ["node"],
+      "personas": ["node", "javascript", "typescript", "frontend", "integration"],
+      "workloads": ["webhook", "bot", "skill", "automation", "api"],
+      "recommendedFor": [
+        "OpenClaw skill development in JS/TS",
+        "Webhook integrations and chat automations",
+        "Teams who want the smallest delta from the official image"
+      ]
+    },
+    {
+      "id": "python",
+      "name": "Python Developer",
+      "slug": "python",
+      "summary": "Adds Python-first automation tooling for ETL, scripts, and lightweight data workflows.",
+      "baseVariant": "default",
+      "features": ["node", "python"],
+      "personas": ["python", "data", "automation", "analyst"],
+      "workloads": ["etl", "scripting", "processing", "analysis", "collector"],
+      "recommendedFor": [
+        "Automation-heavy users who mostly live in Python",
+        "Quick scripts, lightweight ETL, and notebook-adjacent tasks",
+        "Teams that still need OpenClaw's default Node runtime intact"
+      ]
+    },
+    {
+      "id": "go",
+      "name": "Go Developer",
+      "slug": "go",
+      "summary": "Lean Go-focused image for backend tools, daemons, and agent-side services.",
+      "baseVariant": "default",
+      "features": ["node", "go"],
+      "personas": ["go", "golang", "backend", "platform", "infra"],
+      "workloads": ["service", "daemon", "api", "worker", "cli"],
+      "recommendedFor": [
+        "Go services and agent-side workers",
+        "Teams that want a Go toolchain without extra language surface",
+        "Users who already know they do not need Python by default"
+      ]
+    },
+    {
+      "id": "go-python",
+      "name": "Go + Python Developer",
+      "slug": "go-python",
+      "summary": "Best fit for Go developers who still rely on Python tooling in real projects.",
+      "baseVariant": "default",
+      "features": ["node", "go", "python"],
+      "personas": ["go", "golang", "backend", "automation", "platform"],
+      "workloads": ["crawler", "pipeline", "tooling", "worker", "ops"],
+      "recommendedFor": [
+        "Go engineers who regularly shell out to Python tools",
+        "Information processing, pipelines, and hybrid service stacks",
+        "Teams that want one image for both Go apps and Python helpers"
+      ]
+    },
+    {
+      "id": "node-python",
+      "aliases": ["python-node"],
+      "name": "Node.js + Python Collector",
+      "slug": "node-python",
+      "summary": "The fastest choice for information collection, scraping, and content processing.",
+      "baseVariant": "default",
+      "features": ["node", "python"],
+      "personas": ["collector", "research", "ops", "automation", "content"],
+      "workloads": ["scraper", "crawler", "collection", "processing", "browser"],
+      "recommendedFor": [
+        "Information gathering and bookmarking assistants",
+        "Crawler pipelines with JS-based orchestration and Python parsing",
+        "Users who want the broadest automation surface with minimal setup"
+      ]
+    },
+    {
+      "id": "rust-cpp",
+      "name": "Rust + C++ Minimal",
+      "slug": "rust-cpp",
+      "summary": "Slim Rust image with a built-in C++ toolchain for native builds and FFI-heavy work.",
+      "baseVariant": "slim",
+      "features": ["node", "rust", "cxx"],
+      "personas": ["rust", "systems", "compiler", "performance", "ffi"],
+      "workloads": ["native", "cli", "ffi", "plugin", "toolchain"],
+      "recommendedFor": [
+        "Rust engineers who need a focused native development image",
+        "FFI, bindings, and performance-sensitive services",
+        "Teams that want the slimmest curated profile while keeping native build tools"
+      ]
+    }
+  ]
+}

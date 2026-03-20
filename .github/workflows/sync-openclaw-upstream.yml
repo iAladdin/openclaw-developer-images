@@ -1,0 +1,70 @@
+name: Sync OpenClaw Upstream
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Check out official OpenClaw source
+        run: bash scripts/checkout-openclaw-source.sh
+
+      - name: Detect OpenClaw source directory
+        id: source
+        run: |
+          if [[ -f deps/openclaw/package.json ]]; then
+            echo "dir=deps/openclaw" >> "$GITHUB_OUTPUT"
+          elif [[ -f deps/package.json ]]; then
+            echo "dir=deps" >> "$GITHUB_OUTPUT"
+          else
+            echo "Unable to locate OpenClaw source directory" >&2
+            exit 1
+          fi
+
+      - name: Sync upstream main
+        id: sync
+        env:
+          SOURCE_DIR: ${{ steps.source.outputs.dir }}
+        run: |
+          git -C "$SOURCE_DIR" fetch origin main --tags
+
+          current_sha="$(git -C "$SOURCE_DIR" rev-parse HEAD)"
+          remote_sha="$(git -C "$SOURCE_DIR" rev-parse origin/main)"
+
+          if [[ "$current_sha" == "$remote_sha" ]]; then
+            echo "updated=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          git -C "$SOURCE_DIR" checkout --detach "$remote_sha"
+          version="$(node -e "console.log(JSON.parse(require('node:fs').readFileSync(process.argv[1], 'utf8')).version)" "$SOURCE_DIR/package.json")"
+
+          git add "$SOURCE_DIR"
+          echo "updated=true" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "sha=$remote_sha" >> "$GITHUB_OUTPUT"
+
+      - name: Create pull request
+        if: steps.sync.outputs.updated == 'true'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          commit-message: "chore: sync OpenClaw to ${{ steps.sync.outputs.version }}"
+          branch: "codex/sync-openclaw-${{ steps.sync.outputs.version }}"
+          delete-branch: true
+          title: "chore: sync OpenClaw to ${{ steps.sync.outputs.version }}"
+          body: |
+            This PR updates the embedded OpenClaw source checkout to `${{ steps.sync.outputs.version }}`.
+
+            - Source dir: `${{ steps.source.outputs.dir }}`
+            - Upstream commit: `${{ steps.sync.outputs.sha }}`
+            - Triggered by: `${{ github.workflow }}`

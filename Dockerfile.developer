@@ -1,0 +1,89 @@
+ARG OPENCLAW_BASE_TAG=main
+ARG OPENCLAW_BASE_VARIANT_SUFFIX=
+ARG OPENCLAW_BASE_IMAGE=ghcr.io/openclaw/openclaw:${OPENCLAW_BASE_TAG}${OPENCLAW_BASE_VARIANT_SUFFIX}
+
+FROM ${OPENCLAW_BASE_IMAGE}
+
+ARG OPENCLAW_BASE_IMAGE
+
+USER root
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
+ARG DEV_PROFILE=custom
+ARG DEV_FEATURES=""
+ARG DEV_EXTRA_APT_PACKAGES=""
+ARG GO_VERSION=1.24.1
+ARG RUST_TOOLCHAIN=stable
+
+LABEL org.opencontainers.image.title="OpenClaw Developer Image" \
+  org.opencontainers.image.description="Developer-focused OpenClaw image with optional language toolchains" \
+  io.openclaw.developer.profile="${DEV_PROFILE}" \
+  io.openclaw.developer.features="${DEV_FEATURES}" \
+  io.openclaw.developer.base="${OPENCLAW_BASE_IMAGE}"
+
+COPY scripts/install-dev-features.sh /tmp/install-dev-features.sh
+COPY scripts/runtime-shell-profile.sh /etc/profile.d/openclaw-developer-user-paths.sh
+COPY scripts/developer-entrypoint.sh /usr/local/bin/openclaw-developer-entrypoint.sh
+
+RUN chmod 755 /tmp/install-dev-features.sh && \
+    /tmp/install-dev-features.sh "${DEV_FEATURES}" "${DEV_EXTRA_APT_PACKAGES}" "${GO_VERSION}" "${RUST_TOOLCHAIN}" && \
+    chmod 644 /etc/profile.d/openclaw-developer-user-paths.sh && \
+    chmod 755 /usr/local/bin/openclaw-developer-entrypoint.sh && \
+    rm -f /tmp/install-dev-features.sh && \
+    install -d -o node -g node \
+      /home/node/.local/bin \
+      /home/node/.local/pipx \
+      /home/node/.openclaw/.go/bin \
+      /home/node/.openclaw/.local/bin \
+      /home/node/.openclaw/.pipx \
+      /home/node/.openclaw/.npm-global/bin \
+      /home/node/.openclaw/.npm-cache \
+      /home/node/.openclaw/.cache \
+      /home/node/.openclaw/.cache/pip \
+      /home/node/.openclaw/.cache/huggingface/hub \
+      /home/node/.openclaw/.cache/huggingface/transformers \
+      /home/node/.openclaw/.cache/huggingface/datasets \
+      /home/node/.openclaw/.cache/huggingface/sentence-transformers \
+      /home/node/.openclaw/.cache/torch \
+      /home/node/.openclaw/.cache/go/build \
+      /home/node/.openclaw/.cache/go/pkg/mod \
+      /home/node/.openclaw/.cargo/bin \
+      /home/node/.openclaw/.rustup \
+      /home/node/.openclaw/.cargo-target \
+      /home/node/.openclaw/.pnpm \
+      /home/node/.openclaw/.corepack \
+      /opt/openclaw/toolchains/cargo \
+      /opt/openclaw/toolchains/rustup
+
+ENV OPENCLAW_BUILTIN_CARGO_HOME=/opt/openclaw/toolchains/cargo \
+    OPENCLAW_BUILTIN_RUSTUP_HOME=/opt/openclaw/toolchains/rustup \
+    GOPATH=/home/node/.openclaw/.go \
+    GOBIN=/home/node/.openclaw/.go/bin \
+    GOMODCACHE=/home/node/.openclaw/.cache/go/pkg/mod \
+    GOCACHE=/home/node/.openclaw/.cache/go/build \
+    CARGO_HOME=/home/node/.openclaw/.cargo \
+    RUSTUP_HOME=/home/node/.openclaw/.rustup \
+    CARGO_TARGET_DIR=/home/node/.openclaw/.cargo-target \
+    NPM_CONFIG_PREFIX=/home/node/.openclaw/.npm-global \
+    NPM_CONFIG_CACHE=/home/node/.openclaw/.npm-cache \
+    NPM_CONFIG_USERCONFIG=/home/node/.openclaw/.npmrc \
+    COREPACK_HOME=/home/node/.openclaw/.corepack \
+    PNPM_HOME=/home/node/.openclaw/.pnpm \
+    XDG_CACHE_HOME=/home/node/.openclaw/.cache \
+    PYTHONUSERBASE=/home/node/.openclaw/.local \
+    PIP_USER=1 \
+    PIP_BREAK_SYSTEM_PACKAGES=1 \
+    PIP_CACHE_DIR=/home/node/.openclaw/.cache/pip \
+    PIPX_HOME=/home/node/.openclaw/.pipx \
+    PIPX_BIN_DIR=/home/node/.openclaw/.local/bin \
+    HF_HOME=/home/node/.openclaw/.cache/huggingface \
+    HUGGINGFACE_HUB_CACHE=/home/node/.openclaw/.cache/huggingface/hub \
+    TRANSFORMERS_CACHE=/home/node/.openclaw/.cache/huggingface/transformers \
+    HF_DATASETS_CACHE=/home/node/.openclaw/.cache/huggingface/datasets \
+    SENTENCE_TRANSFORMERS_HOME=/home/node/.openclaw/.cache/huggingface/sentence-transformers \
+    TORCH_HOME=/home/node/.openclaw/.cache/torch \
+    PATH=/usr/local/go/bin:/home/node/.openclaw/.go/bin:/home/node/.openclaw/.cargo/bin:/home/node/.openclaw/.npm-global/bin:/home/node/.openclaw/.pnpm:/home/node/.openclaw/.local/bin:/home/node/.local/bin:${PATH}
+
+USER node
+WORKDIR /app
+ENTRYPOINT ["openclaw-developer-entrypoint.sh"]
