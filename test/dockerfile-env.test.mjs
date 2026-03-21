@@ -75,4 +75,5 @@ test("login shells keep persisted user tool paths on PATH", () => {
       "openclaw config set gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback true >/dev/null"
     )
   );
+  assert.match(entrypoint, /dist\/index\.js\|\/app\/dist\/index\.js/);
 });

@@ -2,17 +2,94 @@
 
 **English** | [简体中文](README.zh-CN.md)
 
-This repository adds a developer-focused image distribution layer on top of the official OpenClaw repository.
+Launch a ready-to-use OpenClaw developer environment with one command.
 
-It has three goals:
+This project packages curated OpenClaw developer images and a lightweight CLI so you can start fast without cloning the repo, wiring Docker by hand, or guessing which profile to use.
 
-1. Track official OpenClaw releases and upstream main continuously.
-2. Ship a curated set of developer images for common development and usage scenarios.
-3. Provide an image recommendation service so users can quickly pick the right profile.
+What it gives you:
 
-The most important compatibility rule is simple: a developer image should be a drop-in replacement for the official image.
+1. One-command startup with `ocdev`.
+2. Curated images for common development and usage scenarios.
+3. Safer local ergonomics like isolated state, automatic port shifting, and simple first-login flows.
 
-In practice, that means you should not need to relearn the official `docker run` or `docker compose` arguments. Most of the time, you only replace the image name with the matching developer profile image.
+## Quickstart
+
+Recommended flow:
+
+1. Launch an instance with `npx` or an installed `ocdev`.
+2. Open the Control UI in your browser.
+3. Run `ocdev approve` once for the first browser pairing.
+
+### Option 1: Use `npx` (Recommended)
+
+Start here if you want the fastest path:
+
+```bash
+npx openclaw-dev up --name my-project
+```
+
+Best when you want zero setup and do not need to manage a global CLI install.
+
+### Option 2: Install `ocdev`
+
+If you expect to use it often, install it once and keep the shorter command:
+
+```bash
+npm install -g openclaw-dev
+ocdev up --name my-project
+```
+
+### Option 3: Use a Repository Checkout
+
+If you are working from a local clone of this repository before the npm package is published or updated, use the workspace entrypoint instead:
+
+```bash
+npm run ocdev -- up --name my-project
+```
+
+This path is mainly for contributors, local validation, and unreleased changes.
+
+### First Login
+
+After `up` completes, finish the first browser login with:
+
+```bash
+ocdev token my-project
+ocdev approve my-project
+ocdev claw --name my-project devices list
+```
+
+By default, `ocdev` starts the `node-python` profile, stores instance state in a machine-global manager directory, and brings the stack up immediately with Docker Compose.
+
+By default, `ocdev` manages instances under:
+
+- macOS: `~/Library/Application Support/openclaw-dev/instances`
+- Linux: `${XDG_STATE_HOME:-~/.local/state}/openclaw-dev/instances`
+- Override: `OPENCLAW_DEV_HOME=/custom/path`
+
+If the preferred host ports are already occupied, `ocdev up` automatically shifts forward until it finds a free pair.
+
+Managed file policy:
+
+- `.env` managed keys are refreshed on each `ocdev up`, while extra keys are preserved.
+- `docker-compose.instance.yml` and `README.md` are created once and only refreshed when you pass `--refresh-template`.
+
+### Daily Commands
+
+Useful follow-up commands:
+
+```bash
+ocdev token my-project
+ocdev logs my-project
+ocdev down my-project
+ocdev up --name my-project --refresh-template
+```
+
+If you are running from a repo checkout, prepend `npm run ocdev --`.
+
+The compatibility goal is simple: a developer image should be a drop-in replacement for the official image.
+
+In practice, that means you should not need to relearn the official `docker run` or `docker compose` arguments. Most of the time, you only swap the image name for the matching developer profile image.
 
 ## Design Principles
 
@@ -72,7 +149,12 @@ npm run recommend -- --persona rust --workload ffi,native --need rust,cxx --pref
 
 If no curated profile matches exactly, the recommender prints a custom build suggestion.
 
-## Local Builds
+## Repo Workflows
+
+Clone the repository when you want to contribute, build custom images locally, or work on the CLI itself.
+If your only goal is to launch and use a developer instance, you can stop at Quickstart.
+
+### Local Builds
 
 List all profiles:
 
@@ -115,12 +197,18 @@ The developer image also sets `NODE_COMPILE_CACHE=/home/node/.openclaw/.cache/no
 
 On the first browser connection, you may still see `unauthorized` or `disconnected (1008): pairing required`. That is expected: once the gateway is reachable from the host browser through Docker bridge networking, OpenClaw treats the browser as a remote operator device and requires a one-time approval.
 
-Use the running container to finish the first login:
+If you launched the stack with `ocdev`, finish the first login with:
 
 ```bash
-docker exec openclaw-my-project openclaw config get gateway.auth.token
-docker exec openclaw-my-project openclaw devices list
-docker exec openclaw-my-project openclaw devices approve --latest
+ocdev token my-project
+ocdev approve my-project
+```
+
+For lower-level access, `ocdev` also wraps the container shell-outs:
+
+```bash
+ocdev claw --name my-project devices list
+ocdev exec my-project -- sh
 ```
 
 Paste the token into Control UI settings, then approve the pending browser device. After that, the browser profile stays paired unless you clear browser storage or remove the device pairing entry.
@@ -308,6 +396,16 @@ That gives you a clean split:
 - publishes `<version>-<profile>` images from `v*` tags
 - refreshes `latest-<profile>` for stable releases
 - ships multi-arch images for `linux/amd64` and `linux/arm64`
+
+### 3. CLI Publishing
+
+`.github/workflows/publish-ocdev-npm.yml`
+
+- validates the `openclaw-dev` CLI on `pull_request` and `main` branch changes
+- runs `npm test` and `npm run verify:cli-pack` before any publish step
+- publishes `openclaw-dev` to npm only from tags in the form `ocdev-v<version>`
+- rejects the release if the git tag does not exactly match `packages/cli/package.json`
+- requires the repository secret `NPM_TOKEN` for npm publish
 
 ## OpenClaw Source Directory Compatibility
 

@@ -2,17 +2,94 @@
 
 [English](README.md) | **简体中文**
 
-基于官方 OpenClaw 仓库构建的一层 Developer 镜像发行层。
+一条命令拉起可直接使用的 OpenClaw 开发环境。
 
-目标有三件事：
+这个项目提供一组预制好的 OpenClaw developer 镜像，以及一个轻量 CLI，让你不用先 clone 仓库、不用手配 Docker、也不用纠结该选哪个 profile，就能直接开始。
 
-1. 跟随官方 OpenClaw 版本和主线持续更新。
-2. 为不同开发/使用场景预制一组可直接使用的 Developer 镜像。
-3. 提供一套“镜像选择服务”，帮助用户快速找到最合适的 profile。
+它解决的核心问题是：
 
-最重要的一条兼容原则是：Developer 镜像要能直接平替官方镜像。
+1. 用 `ocdev` 一条命令起实例。
+2. 针对常见开发和使用场景提供预制镜像。
+3. 提供更顺手的本地体验，比如隔离状态目录、自动处理端口冲突、简化首次登录流程。
 
-也就是说，官方原来的 `docker run` / `docker compose` 参数不需要重学，通常只要把镜像名从官方镜像替换成对应 profile 镜像即可。
+## 快速开始
+
+推荐路径：
+
+1. 用 `npx` 或已安装的 `ocdev` 拉起实例。
+2. 在浏览器中打开 Control UI。
+3. 首次浏览器配对时执行一次 `ocdev approve`。
+
+### 方式 1：使用 `npx`（推荐）
+
+如果你想最快跑起来，直接从这里开始：
+
+```bash
+npx openclaw-dev up --name my-project
+```
+
+适合零安装上手，也适合不想自己管理全局 CLI 版本的人。
+
+### 方式 2：安装 `ocdev`
+
+如果你会频繁使用，建议安装一次后直接用短命令：
+
+```bash
+npm install -g openclaw-dev
+ocdev up --name my-project
+```
+
+### 方式 3：使用仓库 checkout
+
+如果你是在本地 clone 这个仓库、并且 npm 包还没发布或还没更新到最新版本，可以临时使用 workspace 入口：
+
+```bash
+npm run ocdev -- up --name my-project
+```
+
+这条路径主要给贡献者、本地验证、以及未发布改动使用。
+
+### 首次登录
+
+`up` 完成后，首次浏览器登录一般这样收尾：
+
+```bash
+ocdev token my-project
+ocdev approve my-project
+ocdev claw --name my-project devices list
+```
+
+默认情况下，`ocdev` 会使用 `node-python` profile，把实例状态写到机器全局管理目录，并直接通过 Docker Compose 拉起整个栈。
+
+默认管理路径：
+
+- macOS: `~/Library/Application Support/openclaw-dev/instances`
+- Linux: `${XDG_STATE_HOME:-~/.local/state}/openclaw-dev/instances`
+- 如需覆盖：`OPENCLAW_DEV_HOME=/custom/path`
+
+如果默认宿主机端口已被占用，`ocdev up` 会自动向后偏移，直到找到一组可用端口。
+
+受管文件策略：
+
+- `.env` 里的受管 key 会在每次 `ocdev up` 时刷新，额外 key 会被保留。
+- `docker-compose.instance.yml` 和 `README.md` 默认只在首次创建时写入；只有显式传 `--refresh-template` 才会刷新。
+
+### 日常命令
+
+常用后续命令：
+
+```bash
+ocdev token my-project
+ocdev logs my-project
+ocdev down my-project
+ocdev up --name my-project --refresh-template
+```
+
+如果你是从仓库 checkout 里运行，在前面加上 `npm run ocdev --` 即可。
+
+最重要的一条兼容原则是：Developer 镜像应该能直接平替官方镜像。
+
+也就是说，官方原来的 `docker run` / `docker compose` 参数不需要重学。大多数情况下，你只需要把镜像名替换成对应的 developer profile 镜像。
 
 ## 设计原则
 
@@ -72,7 +149,12 @@ npm run recommend -- --persona rust --workload ffi,native --need rust,cxx --pref
 
 如果你的需求没有正好命中某个预制 profile，推荐器会给出自定义构建建议。
 
-## 本地构建
+## 仓库工作流
+
+只有在你要参与这个仓库开发、做本地镜像构建、或者修改 CLI 本身时，才需要 clone 仓库。
+如果你的目标只是拉起并使用开发实例，读完“快速开始”其实就够了。
+
+### 本地构建
 
 列出所有 profile：
 
@@ -115,12 +197,18 @@ developer 镜像现在还会默认设置 `NODE_COMPILE_CACHE=/home/node/.opencla
 
 不过首次用浏览器接入时，你仍然可能看到 `unauthorized` 或 `disconnected (1008): pairing required`。这是 OpenClaw 的预期安全行为：当 Docker bridge 网络让宿主机浏览器能访问到网关后，OpenClaw 会把这个浏览器视为一个需要一次性批准的远端 operator 设备。
 
-可以直接在运行中的容器里完成首次登录：
+如果你是通过 `ocdev` 拉起实例，可以这样完成首次登录：
 
 ```bash
-docker exec openclaw-my-project openclaw config get gateway.auth.token
-docker exec openclaw-my-project openclaw devices list
-docker exec openclaw-my-project openclaw devices approve --latest
+ocdev token my-project
+ocdev approve my-project
+```
+
+如果你还想做更底层的容器内操作，`ocdev` 也提供了快捷封装：
+
+```bash
+ocdev claw --name my-project devices list
+ocdev exec my-project -- sh
 ```
 
 先把 token 粘贴进 Control UI 设置页，再批准待处理的浏览器设备。完成一次之后，这个浏览器 profile 会被记住；除非你清空浏览器存储或手动移除设备配对记录，否则不需要重复批准。
@@ -302,12 +390,22 @@ docker run -d \
 
 `.github/workflows/developer-images.yml`
 
-- 当前 CI 只发布到 `ghcr.io`，还没有接入 Docker Hub。
+- 当前镜像发布只推送到 `ghcr.io`，还没有接入 Docker Hub。
 - `pull_request` 阶段会先做 profile 构建验证，但不会推送镜像。
 - 在 `main` 分支变更时发布 `main-<profile>` 镜像。
 - 在版本 tag（`v*`）上发布 `<version>-<profile>` 镜像。
 - 稳定版本额外刷新 `latest-<profile>`。
 - 每个 profile 会发布 `linux/amd64` 和 `linux/arm64` 多架构镜像。
+
+### 3. CLI 发布
+
+`.github/workflows/publish-ocdev-npm.yml`
+
+- `pull_request` 和 `main` 分支上的 CLI 相关改动都会先做校验。
+- 发布前会运行 `npm test` 和 `npm run verify:cli-pack`。
+- 只有在打出 `ocdev-v<version>` 这种 tag 时，才会把 `openclaw-dev` 发布到 npm。
+- 如果 git tag 和 `packages/cli/package.json` 里的版本号不一致，发布会直接失败。
+- 需要在仓库 secrets 里配置 `NPM_TOKEN`。
 
 ## OpenClaw 源目录兼容
 

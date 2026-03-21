@@ -1,0 +1,17 @@
+{
+  "name": "openclaw-dev",
+  "version": "0.1.0",
+  "description": "CLI launcher for OpenClaw developer instances",
+  "type": "module",
+  "bin": {
+    "ocdev": "bin/ocdev"
+  },
+  "files": [
+    "assets",
+    "bin",
+    "src"
+  ],
+  "engines": {
+    "node": ">=22.16.0"
+  }
+}

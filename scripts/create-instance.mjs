@@ -4,6 +4,8 @@ import path from "node:path";
 import { getProfileById, loadCatalog } from "./lib/catalog.mjs";
 import { resolveOfficialBaseTag } from "./lib/openclaw-source.mjs";
 import { buildInstanceConfig, renderInstanceEnv } from "./lib/stack-instance.mjs";
+import { resolvePortPlan } from "../packages/cli/src/lib/ports.mjs";
+import { isComposeServiceRunning } from "../packages/cli/src/lib/docker.mjs";
 
 const args = process.argv.slice(2);
 const instance = readFlag(args, "--name") || readFlag(args, "--instance");
@@ -30,6 +32,7 @@ const image =
 const stackDir = path.join(process.cwd(), "stacks", sanitizePathSegment(instance));
 const envPath = path.join(stackDir, ".env");
 const existingEnv = await readEnvFile(envPath);
+const hasExplicitPortSelection = args.includes("--gateway-port") || args.includes("--bridge-port");
 const gatewayPort = numberFlag(args, "--gateway-port", Number.parseInt(existingEnv.OPENCLAW_GATEWAY_PORT || "", 10) || 18789);
 const bridgePort = numberFlag(
   args,
@@ -46,6 +49,20 @@ const config = buildInstanceConfig({
   bridgePort,
   timezone
 });
+const portPlan = await resolvePortPlan({
+  gatewayPort: config.gatewayPort,
+  bridgePort: config.bridgePort,
+  preserveExistingPorts:
+    !hasExplicitPortSelection &&
+    Object.keys(existingEnv).length > 0 &&
+    (await isComposeServiceRunning({
+      envFile: envPath,
+      composeFile: path.join(process.cwd(), "docker-compose.instance.yml"),
+      service: "openclaw-gateway"
+    }))
+});
+config.gatewayPort = portPlan.gatewayPort;
+config.bridgePort = portPlan.bridgePort;
 config.gatewayToken = existingEnv.OPENCLAW_GATEWAY_TOKEN || config.gatewayToken;
 config.composeProjectName = existingEnv.COMPOSE_PROJECT_NAME || config.composeProjectName;
 config.volumes = {
@@ -90,6 +107,11 @@ console.log(`Created isolated stack: ${config.instance}`);
 console.log(`Env file: ${envPath}`);
 console.log(`State volume: ${config.volumes.state}`);
 console.log(`Workspace volume: ${config.volumes.workspace}`);
+if (portPlan.shifted) {
+  console.log(
+    `Ports ${portPlan.originalGatewayPort}/${portPlan.originalBridgePort} were busy, so the instance will use ${config.gatewayPort}/${config.bridgePort}.`
+  );
+}
 console.log("");
 console.log("Bring it up with:");
 console.log(`docker compose --env-file stacks/${config.instance}/.env -f docker-compose.instance.yml up -d`);

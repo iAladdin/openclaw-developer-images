@@ -2,6 +2,9 @@
   "name": "openclaw-images",
   "private": true,
   "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
   "engines": {
     "node": ">=22.16.0"
   },
@@ -11,6 +14,8 @@
     "build-matrix": "node scripts/print-build-matrix.mjs",
     "build:profile": "node scripts/build-profile.mjs",
     "create:instance": "node scripts/create-instance.mjs",
+    "ocdev": "node packages/cli/bin/ocdev",
+    "verify:cli-pack": "node scripts/verify-cli-pack.mjs",
     "test": "node --test test/*.test.mjs"
   }
 }

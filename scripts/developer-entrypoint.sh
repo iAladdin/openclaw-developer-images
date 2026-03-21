@@ -11,12 +11,18 @@ is_gateway_launch() {
         openclaw.mjs|/app/openclaw.mjs)
           [ "${3:-}" = "gateway" ]
           ;;
+        dist/index.js|/app/dist/index.js)
+          [ "${3:-}" = "gateway" ]
+          ;;
         *)
           return 1
           ;;
       esac
       ;;
     /app/openclaw.mjs)
+      [ "${2:-}" = "gateway" ]
+      ;;
+    dist/index.js|/app/dist/index.js)
       [ "${2:-}" = "gateway" ]
       ;;
     *)
