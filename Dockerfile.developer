@@ -39,6 +39,7 @@ RUN chmod 755 /tmp/install-dev-features.sh && \
       /home/node/.openclaw/.npm-global/bin \
       /home/node/.openclaw/.npm-cache \
       /home/node/.openclaw/.cache \
+      /home/node/.openclaw/.cache/node-compile \
       /home/node/.openclaw/.cache/pip \
       /home/node/.openclaw/.cache/huggingface/hub \
       /home/node/.openclaw/.cache/huggingface/transformers \
@@ -70,6 +71,8 @@ ENV OPENCLAW_BUILTIN_CARGO_HOME=/opt/openclaw/toolchains/cargo \
     COREPACK_HOME=/home/node/.openclaw/.corepack \
     PNPM_HOME=/home/node/.openclaw/.pnpm \
     XDG_CACHE_HOME=/home/node/.openclaw/.cache \
+    NODE_COMPILE_CACHE=/home/node/.openclaw/.cache/node-compile \
+    OPENCLAW_NO_RESPAWN=1 \
     PYTHONUSERBASE=/home/node/.openclaw/.local \
     PIP_USER=1 \
     PIP_BREAK_SYSTEM_PACKAGES=1 \
@@ -87,3 +90,4 @@ ENV OPENCLAW_BUILTIN_CARGO_HOME=/opt/openclaw/toolchains/cargo \
 USER node
 WORKDIR /app
 ENTRYPOINT ["openclaw-developer-entrypoint.sh"]
+CMD ["node", "openclaw.mjs", "gateway", "--allow-unconfigured"]

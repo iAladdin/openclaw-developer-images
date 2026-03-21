@@ -1,6 +1,40 @@
 #!/usr/bin/env sh
 set -eu
 
+is_gateway_launch() {
+  case "${1:-}" in
+    openclaw)
+      [ "${2:-}" = "gateway" ]
+      ;;
+    node|/usr/local/bin/node)
+      case "${2:-}" in
+        openclaw.mjs|/app/openclaw.mjs)
+          [ "${3:-}" = "gateway" ]
+          ;;
+        *)
+          return 1
+          ;;
+      esac
+      ;;
+    /app/openclaw.mjs)
+      [ "${2:-}" = "gateway" ]
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+ensure_docker_bridge_defaults() {
+  if ! openclaw config get gateway.bind >/dev/null 2>&1; then
+    openclaw config set gateway.bind lan >/dev/null
+    if ! openclaw config get gateway.controlUi.allowedOrigins >/dev/null 2>&1 &&
+      ! openclaw config get gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback >/dev/null 2>&1; then
+      openclaw config set gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback true >/dev/null
+    fi
+  fi
+}
+
 mkdir -p \
   "${NPM_CONFIG_PREFIX}/bin" \
   "${NPM_CONFIG_CACHE}" \
@@ -31,6 +65,10 @@ fi
 
 if [ -e "${OPENCLAW_BUILTIN_RUSTUP_HOME}/settings.toml" ] && [ ! -e "${RUSTUP_HOME}/settings.toml" ]; then
   cp -a "${OPENCLAW_BUILTIN_RUSTUP_HOME}/." "${RUSTUP_HOME}/"
+fi
+
+if is_gateway_launch "$@"; then
+  ensure_docker_bridge_defaults
 fi
 
 exec /usr/local/bin/docker-entrypoint.sh "$@"

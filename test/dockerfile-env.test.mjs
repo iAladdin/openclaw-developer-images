@@ -32,6 +32,8 @@ test("routes npm global installs into the persisted openclaw state directory", (
 
 test("routes python user installs into the persisted openclaw state directory", () => {
   assert.match(dockerfile, /XDG_CACHE_HOME=\/home\/node\/\.openclaw\/\.cache/);
+  assert.match(dockerfile, /NODE_COMPILE_CACHE=\/home\/node\/\.openclaw\/\.cache\/node-compile/);
+  assert.match(dockerfile, /OPENCLAW_NO_RESPAWN=1/);
   assert.match(dockerfile, /PYTHONUSERBASE=\/home\/node\/\.openclaw\/\.local/);
   assert.match(dockerfile, /PIP_USER=1/);
   assert.match(dockerfile, /PIP_BREAK_SYSTEM_PACKAGES=1/);
@@ -51,6 +53,7 @@ test("routes model and ML caches into the persisted openclaw cache directory", (
 
 test("login shells keep persisted user tool paths on PATH", () => {
   assert.match(dockerfile, /ENTRYPOINT \["openclaw-developer-entrypoint.sh"\]/);
+  assert.match(dockerfile, /CMD \["node", "openclaw\.mjs", "gateway", "--allow-unconfigured"\]/);
   assert.match(dockerfile, /COPY scripts\/developer-entrypoint\.sh \/usr\/local\/bin\/openclaw-developer-entrypoint\.sh/);
   assert.match(dockerfile, /COPY scripts\/runtime-shell-profile\.sh \/etc\/profile\.d\/openclaw-developer-user-paths\.sh/);
   assert.match(shellProfile, /GOBIN="\$\{GOBIN:-\/home\/node\/\.openclaw\/\.go\/bin\}"/);
@@ -65,4 +68,11 @@ test("login shells keep persisted user tool paths on PATH", () => {
   assert.match(shellProfile, /prepend_path "\$\{PIPX_BIN_DIR\}"/);
   assert.match(entrypoint, /cp -a "\$\{OPENCLAW_BUILTIN_CARGO_HOME\}\/\." "\$\{CARGO_HOME\}\/"/);
   assert.match(entrypoint, /cp -a "\$\{OPENCLAW_BUILTIN_RUSTUP_HOME\}\/\." "\$\{RUSTUP_HOME\}\/"/);
+  assert.ok(entrypoint.includes("if ! openclaw config get gateway.bind >/dev/null 2>&1; then"));
+  assert.ok(entrypoint.includes("openclaw config set gateway.bind lan >/dev/null"));
+  assert.ok(
+    entrypoint.includes(
+      "openclaw config set gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback true >/dev/null"
+    )
+  );
 });

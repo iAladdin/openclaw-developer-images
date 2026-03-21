@@ -23,14 +23,14 @@
 
 ## 当前 Profiles
 
-| Profile | Features | Base | 适合场景 |
-| --- | --- | --- | --- |
-| `node` | `node` | default | JS/TS skill、bot、Webhook 集成 |
-| `python` | `node python` | default | 自动化脚本、ETL、轻量数据处理 |
-| `go` | `node go` | default | Go 服务、agent worker、CLI |
-| `go-python` | `node go python` | default | Go 开发者但又依赖 Python 工具链 |
-| `node-python` | `node python` | default | 信息收集、小龙虾、爬虫、内容处理 |
-| `rust-cpp` | `node rust cxx` | slim | Rust 原生开发、FFI、需要 C++ 构建环境 |
+| Profile       | Features         | Base    | 适合场景                              |
+| ------------- | ---------------- | ------- | ------------------------------------- |
+| `node`        | `node`           | default | JS/TS skill、bot、Webhook 集成        |
+| `python`      | `node python`    | default | 自动化脚本、ETL、轻量数据处理         |
+| `go`          | `node go`        | default | Go 服务、agent worker、CLI            |
+| `go-python`   | `node go python` | default | Go 开发者但又依赖 Python 工具链       |
+| `node-python` | `node python`    | default | 信息收集、小龙虾、爬虫、内容处理      |
+| `rust-cpp`    | `node rust cxx`  | slim    | Rust 原生开发、FFI、需要 C++ 构建环境 |
 
 其中 `python-node` 也作为 `node-python` 的别名支持，方便按习惯输入。
 
@@ -40,11 +40,13 @@
 - 稳定版本标签：`<openclaw-version>-<profile>`
 - 稳定版本别名：`latest-<profile>`
 
+对 `main` 分支的发布会同时产出滚动更新的 `main-<profile>` 标签，以及当前官方 OpenClaw 对应版本的精确标签，方便你按“主线最新”或“同版本对应”两种方式拉取。
+
 例如：
 
-- `ghcr.io/<org>/<repo>:main-go-python`
-- `ghcr.io/<org>/<repo>:2026.3.14-go-python`
-- `ghcr.io/<org>/<repo>:latest-rust-cpp`
+- `ghcr.io/ialaddin/openclaw-developer-images:main-go-python`
+- `ghcr.io/ialaddin/openclaw-developer-images:2026.3.14-go-python`
+- `ghcr.io/ialaddin/openclaw-developer-images:latest-rust-cpp`
 
 其中 `2026.3.14` 直接对应官方 OpenClaw 版本。
 
@@ -95,10 +97,33 @@ npm run build:profile -- --profile python-node --tag openclaw-developer:main-nod
 ```bash
 docker run -d \
   -v ~/.openclaw-children/my-project:/home/node/.openclaw \
-  -p 8080:18789 \
+  -p 18789:18789 \
   --name openclaw-my-project \
   openclaw-developer:main-node-python
 ```
+
+如果你挂载的是一个全新的空状态目录，developer 镜像会在首次启动时自动往 `/home/node/.openclaw/openclaw.json` 写入适配 Docker bridge 网络的默认项：
+
+- `gateway.bind=lan`
+- `gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback=true`
+
+这样可以保证官方这种 `docker run -p 18789:18789 ...` 风格的启动命令，在宿主机浏览器里可以直接访问，不需要你额外手配。Gateway 仍然默认启用 token 鉴权。
+
+这组默认值是为本地开发型 Docker 使用准备的。如果你要把网关暴露到 localhost 之外，建议改成显式的 `gateway.controlUi.allowedOrigins`，并重新审视网络暴露范围。
+
+developer 镜像现在还会默认设置 `NODE_COMPILE_CACHE=/home/node/.openclaw/.cache/node-compile` 和 `OPENCLAW_NO_RESPAWN=1`，这样重复运行 CLI 更快，同时在 Docker 场景下遇到需要重启的网关配置时也更友好。
+
+不过首次用浏览器接入时，你仍然可能看到 `unauthorized` 或 `disconnected (1008): pairing required`。这是 OpenClaw 的预期安全行为：当 Docker bridge 网络让宿主机浏览器能访问到网关后，OpenClaw 会把这个浏览器视为一个需要一次性批准的远端 operator 设备。
+
+可以直接在运行中的容器里完成首次登录：
+
+```bash
+docker exec openclaw-my-project openclaw config get gateway.auth.token
+docker exec openclaw-my-project openclaw devices list
+docker exec openclaw-my-project openclaw devices approve --latest
+```
+
+先把 token 粘贴进 Control UI 设置页，再批准待处理的浏览器设备。完成一次之后，这个浏览器 profile 会被记住；除非你清空浏览器存储或手动移除设备配对记录，否则不需要重复批准。
 
 也可以手工组合 feature：
 
@@ -139,7 +164,7 @@ docker buildx build \
 npm run create:instance -- \
   --name collector \
   --profile node-python \
-  --image ghcr.io/<org>/<repo>:main-node-python \
+  --image ghcr.io/ialaddin/openclaw-developer-images:main-node-python \
   --gateway-port 18789 \
   --bridge-port 18790 \
   --timezone Asia/Shanghai
@@ -251,7 +276,7 @@ docker compose --env-file stacks/collector/.env -f docker-compose.instance.yml d
 ```bash
 docker run -d \
   -v ~/.openclaw-children/my-project:/home/node/.openclaw \
-  -p 8080:18789 \
+  -p 18789:18789 \
   --name openclaw-my-project \
   openclaw-developer:main-node-python
 ```

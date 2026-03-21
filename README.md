@@ -23,14 +23,14 @@ In practice, that means you should not need to relearn the official `docker run`
 
 ## Current Profiles
 
-| Profile | Features | Base | Recommended for |
-| --- | --- | --- | --- |
-| `node` | `node` | default | JS/TS skills, bots, webhook integrations |
-| `python` | `node python` | default | automation scripts, ETL, lightweight data processing |
-| `go` | `node go` | default | Go services, agent workers, CLIs |
-| `go-python` | `node go python` | default | Go developers who also rely on Python tooling |
-| `node-python` | `node python` | default | research, collection, crawling, content processing |
-| `rust-cpp` | `node rust cxx` | slim | Rust-native development, FFI, C++ build environments |
+| Profile       | Features         | Base    | Recommended for                                      |
+| ------------- | ---------------- | ------- | ---------------------------------------------------- |
+| `node`        | `node`           | default | JS/TS skills, bots, webhook integrations             |
+| `python`      | `node python`    | default | automation scripts, ETL, lightweight data processing |
+| `go`          | `node go`        | default | Go services, agent workers, CLIs                     |
+| `go-python`   | `node go python` | default | Go developers who also rely on Python tooling        |
+| `node-python` | `node python`    | default | research, collection, crawling, content processing   |
+| `rust-cpp`    | `node rust cxx`  | slim    | Rust-native development, FFI, C++ build environments |
 
 `python-node` is also supported as an alias for `node-python`.
 
@@ -40,11 +40,13 @@ In practice, that means you should not need to relearn the official `docker run`
 - Stable release tag: `<openclaw-version>-<profile>`
 - Stable release alias: `latest-<profile>`
 
+Pushes to `main` publish both the moving `main-<profile>` tags and the exact current upstream OpenClaw version tags, so you can choose either "latest mainline" or "same-version corresponding" pulls.
+
 Examples:
 
-- `ghcr.io/<org>/<repo>:main-go-python`
-- `ghcr.io/<org>/<repo>:2026.3.14-go-python`
-- `ghcr.io/<org>/<repo>:latest-rust-cpp`
+- `ghcr.io/ialaddin/openclaw-developer-images:main-go-python`
+- `ghcr.io/ialaddin/openclaw-developer-images:2026.3.14-go-python`
+- `ghcr.io/ialaddin/openclaw-developer-images:latest-rust-cpp`
 
 Here `2026.3.14` maps directly to the matching upstream OpenClaw version.
 
@@ -95,10 +97,33 @@ After the build finishes, you can replace the official image name directly:
 ```bash
 docker run -d \
   -v ~/.openclaw-children/my-project:/home/node/.openclaw \
-  -p 8080:18789 \
+  -p 18789:18789 \
   --name openclaw-my-project \
   openclaw-developer:main-node-python
 ```
+
+On first startup with an empty mounted state directory, the developer image automatically seeds Docker bridge friendly gateway defaults into `/home/node/.openclaw/openclaw.json`:
+
+- `gateway.bind=lan`
+- `gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback=true`
+
+This keeps the official `docker run -p 18789:18789 ...` style usable from the host browser without extra setup. The gateway still uses token auth by default.
+
+These defaults are meant for local developer Docker usage. If you plan to expose the gateway beyond localhost, replace the fallback with explicit `gateway.controlUi.allowedOrigins` and review the network exposure carefully.
+
+The developer image also sets `NODE_COMPILE_CACHE=/home/node/.openclaw/.cache/node-compile` and `OPENCLAW_NO_RESPAWN=1` by default, so repeated CLI runs are faster and restart-required gateway config changes behave better in Docker.
+
+On the first browser connection, you may still see `unauthorized` or `disconnected (1008): pairing required`. That is expected: once the gateway is reachable from the host browser through Docker bridge networking, OpenClaw treats the browser as a remote operator device and requires a one-time approval.
+
+Use the running container to finish the first login:
+
+```bash
+docker exec openclaw-my-project openclaw config get gateway.auth.token
+docker exec openclaw-my-project openclaw devices list
+docker exec openclaw-my-project openclaw devices approve --latest
+```
+
+Paste the token into Control UI settings, then approve the pending browser device. After that, the browser profile stays paired unless you clear browser storage or remove the device pairing entry.
 
 You can also build custom feature combinations manually:
 
@@ -139,7 +164,7 @@ Those volumes are independent from the image lifecycle, so `docker compose up --
 npm run create:instance -- \
   --name collector \
   --profile node-python \
-  --image ghcr.io/<org>/<repo>:main-node-python \
+  --image ghcr.io/ialaddin/openclaw-developer-images:main-node-python \
   --gateway-port 18789 \
   --bridge-port 18790 \
   --timezone Asia/Shanghai
@@ -251,7 +276,7 @@ With a runtime command like this:
 ```bash
 docker run -d \
   -v ~/.openclaw-children/my-project:/home/node/.openclaw \
-  -p 8080:18789 \
+  -p 18789:18789 \
   --name openclaw-my-project \
   openclaw-developer:main-node-python
 ```

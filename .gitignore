@@ -3,7 +3,6 @@
 __MACOSX/
 .AppleDouble
 .LSOverride
-Icon[]
 
 # Thumbnails
 ._*
@@ -26,3 +25,5 @@ Temporary Items
 
 # Generated local stack definitions
 stacks/
+.cache
+persona-local

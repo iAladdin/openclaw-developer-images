@@ -112,12 +112,20 @@ jobs:
         id: tags
         env:
           IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          IMAGE_TAGS_JSON: ${{ toJSON(matrix.profile.imageTags) }}
         run: |
           image="$(printf '%s' "$IMAGE" | tr '[:upper:]' '[:lower:]')"
-          tags=("${image}:${{ matrix.profile.baseTag }}-${{ matrix.profile.slug }}")
-          if [[ "${{ matrix.profile.stableRelease }}" == "true" ]]; then
-            tags+=("${image}:latest-${{ matrix.profile.slug }}")
-          fi
+          mapfile -t suffixes < <(node --input-type=module <<'EOF'
+          const tags = JSON.parse(process.env.IMAGE_TAGS_JSON ?? "[]");
+          for (const tag of tags) {
+            console.log(tag);
+          }
+          EOF
+          )
+          tags=()
+          for suffix in "${suffixes[@]}"; do
+            tags+=("${image}:${suffix}")
+          done
 
           {
             echo "value<<EOF"
