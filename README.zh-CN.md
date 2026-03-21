@@ -405,7 +405,9 @@ docker run -d \
 - 发布前会运行 `npm test` 和 `npm run verify:cli-pack`。
 - 只有在打出 `ocdev-v<version>` 这种 tag 时，才会把 `openclaw-dev` 发布到 npm。
 - 如果 git tag 和 `packages/cli/package.json` 里的版本号不一致，发布会直接失败。
-- 需要在仓库 secrets 里配置 `NPM_TOKEN`。
+- 使用 npm trusted publishing，从 GitHub Actions 直接发布，不再依赖长期保存的 `NPM_TOKEN`。
+- 第一次发布前，需要先在 npm 包设置里把这个 GitHub 仓库和 workflow 配成受信任发布者。
+- 当前仓库对应的 trusted publisher 配置值是：GitHub 用户/组织 `iAladdin`、仓库 `openclaw-developer-images`、workflow `publish-ocdev-npm.yml`。
 
 ## OpenClaw 源目录兼容
 

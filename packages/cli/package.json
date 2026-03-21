@@ -3,6 +3,10 @@
   "version": "0.1.0",
   "description": "CLI launcher for OpenClaw developer instances",
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/iAladdin/openclaw-developer-images.git"
+  },
   "bin": {
     "ocdev": "bin/ocdev"
   },

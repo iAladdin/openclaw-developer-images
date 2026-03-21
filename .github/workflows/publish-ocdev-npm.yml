@@ -79,6 +79,4 @@ jobs:
           EOF
 
       - name: Publish openclaw-dev to npm
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: npm publish ./packages/cli --access public --provenance
+        run: npm publish ./packages/cli --access public

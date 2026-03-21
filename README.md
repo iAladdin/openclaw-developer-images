@@ -405,7 +405,9 @@ That gives you a clean split:
 - runs `npm test` and `npm run verify:cli-pack` before any publish step
 - publishes `openclaw-dev` to npm only from tags in the form `ocdev-v<version>`
 - rejects the release if the git tag does not exactly match `packages/cli/package.json`
-- requires the repository secret `NPM_TOKEN` for npm publish
+- uses npm trusted publishing from GitHub Actions instead of a long-lived `NPM_TOKEN`
+- requires the npm package to trust this GitHub repository and workflow before the first release
+- trusted publisher values for this repo: GitHub user/org `iAladdin`, repository `openclaw-developer-images`, workflow `publish-ocdev-npm.yml`
 
 ## OpenClaw Source Directory Compatibility
 
