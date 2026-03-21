@@ -1,14 +1,21 @@
 {
   "name": "openclaw-dev",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "CLI launcher for OpenClaw developer instances",
   "type": "module",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/iAladdin/openclaw-developer-images.git"
   },
+  "openclaw": {
+    "recommendedImageBaseTag": "2026.3.14"
+  },
   "bin": {
     "ocdev": "bin/ocdev"
+  },
+  "dependencies": {
+    "boxen": "^8.0.1",
+    "yoctocolors": "^2.1.1"
   },
   "files": [
     "assets",

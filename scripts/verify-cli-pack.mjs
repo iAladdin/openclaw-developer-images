@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { mkdir, mkdtemp, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
@@ -9,6 +9,7 @@ const execFileAsync = promisify(execFile);
 
 const cacheDir = path.join(process.cwd(), ".cache", "cli-pack");
 const extractDir = await mkdtemp(path.join(os.tmpdir(), "openclaw-dev-pack-"));
+const installDir = await mkdtemp(path.join(os.tmpdir(), "openclaw-dev-install-"));
 
 try {
   await mkdir(cacheDir, { recursive: true });
@@ -41,14 +42,33 @@ try {
     cwd: process.cwd()
   });
 
-  const { stdout: helpOutput } = await execFileAsync("node", ["package/bin/ocdev", "help"], {
-    cwd: extractDir
+  await writeFile(
+    path.join(installDir, "package.json"),
+    JSON.stringify(
+      {
+        name: "openclaw-dev-pack-verify",
+        private: true
+      },
+      null,
+      2
+    ),
+    "utf8"
+  );
+
+  await execFileAsync("npm", ["install", "--no-package-lock", tarballPath], {
+    cwd: installDir
+  });
+
+  const { stdout: helpOutput } = await execFileAsync("./node_modules/.bin/ocdev", ["help"], {
+    cwd: installDir
   });
 
   assert.match(helpOutput, /ocdev - OpenClaw developer instance launcher/);
-  assert.match(helpOutput, /State root:/);
+  assert.match(helpOutput, /Manager home/);
+  assert.match(helpOutput, /npx openclaw-dev up --name my-project/);
 
   console.log(`Verified packed CLI tarball: ${tarballPath}`);
 } finally {
   await rm(extractDir, { recursive: true, force: true });
+  await rm(installDir, { recursive: true, force: true });
 }

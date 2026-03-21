@@ -61,11 +61,13 @@ ocdev claw --name my-project devices list
 
 By default, `ocdev` starts the `node-python` profile, stores instance state in a machine-global manager directory, and brings the stack up immediately with Docker Compose.
 
-By default, `ocdev` manages instances under:
+By default, `ocdev` follows the OpenClaw-style hidden manager root and stores instances under:
 
-- macOS: `~/Library/Application Support/openclaw-dev/instances`
-- Linux: `${XDG_STATE_HOME:-~/.local/state}/openclaw-dev/instances`
+- Manager home: `~/.openclaw-dev`
+- Instances root: `~/.openclaw-dev/instances`
 - Override: `OPENCLAW_DEV_HOME=/custom/path`
+
+The published CLI intentionally pins its default image to the release-compatible image tag instead of the moving `main-<profile>` tags, so `npx openclaw-dev up` pulls a known-good image by default.
 
 If the preferred host ports are already occupied, `ocdev up` automatically shifts forward until it finds a free pair.
 

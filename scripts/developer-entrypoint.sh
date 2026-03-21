@@ -34,10 +34,11 @@ is_gateway_launch() {
 ensure_docker_bridge_defaults() {
   if ! openclaw config get gateway.bind >/dev/null 2>&1; then
     openclaw config set gateway.bind lan >/dev/null
-    if ! openclaw config get gateway.controlUi.allowedOrigins >/dev/null 2>&1 &&
-      ! openclaw config get gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback >/dev/null 2>&1; then
-      openclaw config set gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback true >/dev/null
-    fi
+  fi
+
+  if ! openclaw config get gateway.controlUi.allowedOrigins >/dev/null 2>&1 &&
+    ! openclaw config get gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback >/dev/null 2>&1; then
+    openclaw config set gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback true >/dev/null
   fi
 }
 

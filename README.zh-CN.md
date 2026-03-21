@@ -61,11 +61,13 @@ ocdev claw --name my-project devices list
 
 默认情况下，`ocdev` 会使用 `node-python` profile，把实例状态写到机器全局管理目录，并直接通过 Docker Compose 拉起整个栈。
 
-默认管理路径：
+默认情况下，`ocdev` 会沿用 OpenClaw 风格的隐藏管理根目录：
 
-- macOS: `~/Library/Application Support/openclaw-dev/instances`
-- Linux: `${XDG_STATE_HOME:-~/.local/state}/openclaw-dev/instances`
+- 管理根目录：`~/.openclaw-dev`
+- 实例目录：`~/.openclaw-dev/instances`
 - 如需覆盖：`OPENCLAW_DEV_HOME=/custom/path`
+
+已发布的 CLI 默认会锁定到和当前 release 对应的镜像 tag，而不是直接追 `main-<profile>`，这样 `npx openclaw-dev up` 默认拉到的是一组更可预期的镜像。
 
 如果默认宿主机端口已被占用，`ocdev up` 会自动向后偏移，直到找到一组可用端口。
 

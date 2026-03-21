@@ -26,7 +26,7 @@ test("normalizeProfileId resolves python-node alias", () => {
 test("defaultImageForProfile points at the published developer image registry", () => {
   assert.equal(
     defaultImageForProfile("go-python"),
-    "ghcr.io/ialaddin/openclaw-developer-images:main-go-python"
+    "ghcr.io/ialaddin/openclaw-developer-images:2026.3.14-go-python"
   );
 });
 
@@ -81,14 +81,14 @@ test("readPositional keeps boolean flags from swallowing later positional args",
   assert.equal(readPositional(["down", "--volumes", "collector"], 1), "collector");
 });
 
-test("resolveManagerHome prefers an OS-specific global path", () => {
+test("resolveManagerHome uses the openclaw-style manager root by default", () => {
   assert.equal(
     resolveManagerHome({
       platform: "darwin",
       homeDir: "/Users/tester",
       env: {}
     }),
-    "/Users/tester/Library/Application Support/openclaw-dev"
+    "/Users/tester/.openclaw-dev"
   );
   assert.equal(
     resolveInstancesRoot({
@@ -96,7 +96,7 @@ test("resolveManagerHome prefers an OS-specific global path", () => {
       homeDir: "/home/tester",
       env: {}
     }),
-    "/home/tester/.local/state/openclaw-dev/instances"
+    "/home/tester/.openclaw-dev/instances"
   );
 });
 
@@ -154,12 +154,15 @@ test("cli compose asset stays aligned with the root compose template", async () 
   assert.match(cliCompose, /"--allow-unconfigured"/);
 });
 
-test("help text includes approve, exec, and claw shortcuts", () => {
+test("help text includes descriptions, examples, and manager paths", () => {
   const help = helpText("/tmp/openclaw-images");
 
-  assert.match(help, /ocdev approve \[instance] \[requestId\|--latest]/);
-  assert.match(help, /ocdev exec \[instance] \[--service <service>] \[-T\|--no-tty] -- <command\.\.\.>/);
-  assert.match(help, /ocdev claw \[--name <instance>] <openclaw args\.\.\.>/);
+  assert.match(help, /ocdev approve\s+Approve the first browser pairing request/);
+  assert.match(help, /ocdev exec\s+Run an arbitrary command inside a managed container/);
+  assert.match(help, /ocdev claw\s+Shortcut for `docker exec \.\.\. openclaw \.\.\.`/);
+  assert.match(help, /npx openclaw-dev up --name my-project/);
+  assert.match(help, /Manager home\s+\/root\/\.openclaw-dev|Manager home\s+\/Users\/.+\/\.openclaw-dev|Manager home/);
+  assert.match(help, /Default image\s+ghcr\.io\/ialaddin\/openclaw-developer-images:2026\.3\.14-node-python/);
 });
 
 test("resolveApproveRequest keeps an explicit request ID when --name is used", () => {

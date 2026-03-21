@@ -6,7 +6,9 @@ import path from "node:path";
 import {
   DEFAULT_BRIDGE_PORT_OFFSET,
   DEFAULT_GATEWAY_PORT,
+  DEFAULT_IMAGE_BASE_TAG,
   DEFAULT_IMAGE_REGISTRY,
+  DEFAULT_MANAGER_HOME_DIRNAME,
   DEFAULT_PROFILE,
   PROFILE_ALIASES,
   SUPPORTED_PROFILES
@@ -64,26 +66,13 @@ export function defaultInstanceName(cwd = process.cwd()) {
 
 export function resolveManagerHome({
   env = process.env,
-  platform = process.platform,
   homeDir = os.homedir()
 } = {}) {
   if (env.OPENCLAW_DEV_HOME?.trim()) {
     return path.resolve(env.OPENCLAW_DEV_HOME.trim());
   }
 
-  if (platform === "darwin") {
-    return path.join(homeDir, "Library", "Application Support", "openclaw-dev");
-  }
-
-  if (platform === "win32" && env.APPDATA?.trim()) {
-    return path.join(env.APPDATA.trim(), "openclaw-dev");
-  }
-
-  if (env.XDG_STATE_HOME?.trim()) {
-    return path.join(env.XDG_STATE_HOME.trim(), "openclaw-dev");
-  }
-
-  return path.join(homeDir, ".local", "state", "openclaw-dev");
+  return path.join(homeDir, DEFAULT_MANAGER_HOME_DIRNAME);
 }
 
 export function resolveInstancesRoot(options) {
@@ -104,7 +93,7 @@ export function normalizeProfileId(rawProfile = DEFAULT_PROFILE) {
 }
 
 export function defaultImageForProfile(profile) {
-  return `${DEFAULT_IMAGE_REGISTRY}:main-${normalizeProfileId(profile)}`;
+  return `${DEFAULT_IMAGE_REGISTRY}:${DEFAULT_IMAGE_BASE_TAG}-${normalizeProfileId(profile)}`;
 }
 
 export function detectTimezone() {

@@ -8,15 +8,18 @@ import {
 import {
   buildConfigFromArgs,
   defaultInstanceName,
+  defaultImageForProfile,
   hasFlag,
   readEnvFile,
   readFlag,
   readPositional,
+  resolveManagerHome,
   resolveInstancesRoot,
   stackPaths,
   writeStackFiles
 } from "./lib/instance.mjs";
 import { resolvePortPlan } from "./lib/ports.mjs";
+import { renderHelp } from "./lib/ui.mjs";
 
 export async function main(argv, { cwd = process.cwd() } = {}) {
   const command = argv[0] || "help";
@@ -460,22 +463,14 @@ function printHelp(cwd) {
 
 export function helpText(cwd) {
   const defaultName = defaultInstanceName(cwd);
+  const defaultProfile = "node-python";
 
-  return [
-    "ocdev - OpenClaw developer instance launcher",
-    "",
-    "Usage:",
-    "  ocdev up [--name <instance>] [--profile <profile>] [--image <image>] [--gateway-port <port>] [--bridge-port <port>] [--timezone <iana-tz>] [--refresh-template]",
-    "  ocdev down [instance] [--volumes]",
-    "  ocdev logs [instance] [--service <service>]",
-    "  ocdev token [instance]",
-    "  ocdev approve [instance] [requestId|--latest] [--request-id <id>]",
-    "  ocdev exec [instance] [--service <service>] [-T|--no-tty] -- <command...>",
-    "  ocdev claw [--name <instance>] <openclaw args...>",
-    "  ocdev claw [instance] -- <openclaw args...>",
-    "  ocdev help",
-    "",
-    `Defaults: instance=${defaultName}, profile=node-python`,
-    `State root: ${resolveInstancesRoot()}`
-  ].join("\n");
+  return renderHelp({
+    defaultInstance: defaultName,
+    defaultProfile,
+    defaultImage: defaultImageForProfile(defaultProfile),
+    managerHome: resolveManagerHome(),
+    instancesRoot: resolveInstancesRoot(),
+    styled: process.stdout.isTTY
+  });
 }
