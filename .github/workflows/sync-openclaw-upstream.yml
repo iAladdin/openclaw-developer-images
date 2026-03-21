@@ -5,6 +5,9 @@ on:
     - cron: "*/30 * * * *"
   workflow_dispatch:
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 permissions:
   contents: write
   pull-requests: write
@@ -56,7 +59,9 @@ jobs:
 
       - name: Create pull request
         if: steps.sync.outputs.updated == 'true'
-        uses: peter-evans/create-pull-request@v7
+        id: cpr
+        continue-on-error: true
+        uses: peter-evans/create-pull-request@v8
         with:
           commit-message: "chore: sync OpenClaw to ${{ steps.sync.outputs.version }}"
           branch: "codex/sync-openclaw-${{ steps.sync.outputs.version }}"
@@ -68,3 +73,17 @@ jobs:
             - Source dir: `${{ steps.source.outputs.dir }}`
             - Upstream commit: `${{ steps.sync.outputs.sha }}`
             - Triggered by: `${{ github.workflow }}`
+
+      - name: Record sync fallback guidance
+        if: steps.sync.outputs.updated == 'true' && steps.cpr.outcome == 'failure'
+        run: |
+          {
+            echo "## Upstream sync needs repository settings"
+            echo
+            echo "The upstream source updated successfully in the workflow workspace, but GitHub Actions was not allowed to open a pull request."
+            echo
+            echo "To enable auto-PR syncs, turn on:"
+            echo "- Settings -> Actions -> General -> Workflow permissions -> Allow GitHub Actions to create and approve pull requests"
+            echo
+            echo "If your org policy blocks that setting, provide a PAT secret and wire it into the sync workflow instead."
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -11,6 +11,7 @@ on:
       - "packages/**"
       - "scripts/verify-cli-pack.mjs"
       - "package.json"
+      - "package-lock.json"
       - "test/**"
   pull_request:
     paths:
@@ -18,6 +19,7 @@ on:
       - "packages/**"
       - "scripts/verify-cli-pack.mjs"
       - "package.json"
+      - "package-lock.json"
       - "test/**"
   workflow_dispatch:
 
@@ -36,6 +38,11 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 24
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install workspace dependencies
+        run: npm ci
 
       - name: Run repository tests
         run: npm test
@@ -59,6 +66,11 @@ jobs:
         with:
           node-version: 24
           registry-url: https://registry.npmjs.org
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install workspace dependencies
+        run: npm ci
 
       - name: Validate tag matches package version
         env:
